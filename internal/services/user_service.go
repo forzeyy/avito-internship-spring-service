@@ -24,8 +24,12 @@ type userService struct {
 	authUtil utils.AuthUtil
 }
 
-func NewUserService(userRepo repos.UserRepo) UserService {
-	return &userService{userRepo: userRepo}
+func NewUserService(userRepo repos.UserRepo, jwtKey string, authUtil utils.AuthUtil) UserService {
+	return &userService{
+		userRepo: userRepo,
+		jwtKey:   []byte(jwtKey),
+		authUtil: authUtil,
+	}
 }
 
 func (us *userService) DummyLogin(ctx context.Context, role string) (string, error) {

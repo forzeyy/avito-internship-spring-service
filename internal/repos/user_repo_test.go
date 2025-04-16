@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// CreateUser
 func TestCreateUser_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	assert.NoError(t, err)
@@ -54,6 +55,7 @@ func TestCreateUser_MissingPassword(t *testing.T) {
 	assert.EqualError(t, err, "пароль пользователя не может быть пустым")
 }
 
+// GetUserByEmail
 func TestGetUserByEmail_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	assert.NoError(t, err)

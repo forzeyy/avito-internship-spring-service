@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// CreatePVZ
 func TestCreatePVZ_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	assert.NoError(t, err)
@@ -58,6 +59,7 @@ func TestCreatePVZ_WrongCity(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
+// GetPVZs
 func TestGetPVZs_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	assert.NoError(t, err)

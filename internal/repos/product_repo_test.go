@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// AddProduct
 func TestAddProduct_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	assert.NoError(t, err)
@@ -60,6 +61,7 @@ func TestAddProduct_Error(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
+// DeleteLastProduct
 func TestDeleteLastProduct_Success(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	assert.NoError(t, err)

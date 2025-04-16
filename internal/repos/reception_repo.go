@@ -12,6 +12,7 @@ import (
 
 type ReceptionRepo interface {
 	CreateReception(ctx context.Context, reception *models.Reception) error
+	GetLastOpenReception(ctx context.Context, pvzID uuid.UUID) (*models.Reception, error)
 	CloseLastReception(ctx context.Context, pvzID uuid.UUID) (*models.Reception, error)
 }
 
@@ -63,6 +64,32 @@ func (rr *receptionRepo) CloseLastReception(ctx context.Context, pvzID uuid.UUID
 			return nil, nil
 		}
 		return nil, fmt.Errorf("не удалось закрыть последнюю приемку: %v", err)
+	}
+	return &reception, nil
+}
+
+func (rr *receptionRepo) GetLastOpenReception(ctx context.Context, pvzID uuid.UUID) (*models.Reception, error) {
+	var reception models.Reception
+
+	query := `
+		SELECT id, pvz_id, status, created_at, closed_at
+		FROM receptions
+		WHERE pvz_id = $1 AND status = 'in_progress'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+	err := rr.db.QueryRow(ctx, query, pvzID).Scan(
+		&reception.ID,
+		&reception.PVZID,
+		&reception.Status,
+		&reception.DateTime,
+		&reception.ClosedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("не удалось получить последнюю открытую приемку: %v", err)
 	}
 	return &reception, nil
 }
