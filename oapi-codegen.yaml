@@ -1,0 +1,5 @@
+package: dto
+generate:
+  models: true
+  embedded-spec: false
+output: internal/dto/dto.gen.go
