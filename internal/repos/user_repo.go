@@ -28,7 +28,7 @@ func (ur *userRepo) CreateUser(ctx context.Context, user *models.User) error {
 	}
 
 	query := `
-		INSERT INTO users (email, password, role, created_at)
+		INSERT INTO users (email, password_hash, role, created_at)
 		VALUES ($1, $2, $3, $4)
 	`
 	_, err := ur.db.Exec(ctx, query, user.Email, user.PasswordHash, user.Role, user.CreatedAt)

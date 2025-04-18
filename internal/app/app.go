@@ -5,6 +5,7 @@ import (
 
 	"github.com/forzeyy/avito-internship-spring-service/internal/config"
 	"github.com/forzeyy/avito-internship-spring-service/internal/database"
+	"github.com/forzeyy/avito-internship-spring-service/internal/routes"
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,6 +21,7 @@ func Run(cfg *config.Config) error {
 	defer dbConn.Close()
 
 	e := echo.New()
+	routes.InitRoutes(e, dbConn, cfg)
 	e.Logger.Fatal(e.Start(":8080"))
 
 	return nil

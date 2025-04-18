@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/forzeyy/avito-internship-spring-service/internal/models"
@@ -21,7 +22,10 @@ type productService struct {
 }
 
 func NewProductService(prodRepo repos.ProductRepo, recRepo repos.ReceptionRepo) ProductService {
-	return &productService{prodRepo: prodRepo}
+	return &productService{
+		prodRepo: prodRepo,
+		recRepo:  recRepo,
+	}
 }
 
 func (ps *productService) AddProduct(ctx context.Context, productType, pvzID string) (*models.Product, error) {
@@ -30,7 +34,7 @@ func (ps *productService) AddProduct(ctx context.Context, productType, pvzID str
 	}
 
 	parsedPVZID, err := uuid.Parse(pvzID)
-	if err != nil {
+	if err != nil || parsedPVZID == uuid.Nil {
 		return nil, errors.New("неверный формат pvz_id")
 	}
 
@@ -39,7 +43,7 @@ func (ps *productService) AddProduct(ctx context.Context, productType, pvzID str
 		return nil, err
 	}
 	if lastReception == nil {
-		return nil, errors.New("приемка закрыта")
+		return nil, errors.New("последняя открытая приемка не найдена")
 	}
 
 	product := &models.Product{
@@ -62,12 +66,13 @@ func (ps *productService) DeleteLastProduct(ctx context.Context, pvzID string) e
 		return errors.New("неверный формат pvz_id")
 	}
 
+	// проверка есть ли открытая приемка
 	lastReception, err := ps.recRepo.GetLastOpenReception(ctx, parsedPVZID)
 	if err != nil {
-		return err
+		return fmt.Errorf("не удалось получить последнюю открытую приемку: %w", err)
 	}
-	if lastReception == nil {
-		return errors.New("приемка закрыта")
+	if lastReception == nil || lastReception.ID == uuid.Nil {
+		return errors.New("последняя открытая приемка не найдена")
 	}
 
 	return ps.prodRepo.DeleteLastProduct(ctx, parsedPVZID)

@@ -34,31 +34,35 @@ func (pr *pvzRepo) CreatePVZ(ctx context.Context, pvz *models.PVZ) error {
 }
 
 func (pr *pvzRepo) GetPVZs(ctx context.Context, startDate, endDate *time.Time, page, limit int) ([]models.PVZ, error) {
-	var query string
-	var args []any
-
-	query = `
-		SELECT id, city, reg_date
-		FROM pvzs
-		WHERE city IN ('Москва', 'Санкт-Петербург', 'Казань')
-	`
+	var (
+		query = `
+			SELECT id, city, reg_date
+			FROM pvzs
+			WHERE city IN ('Москва', 'Санкт-Петербург', 'Казань')
+		`
+		args     []any
+		argIndex = 1
+	)
 
 	if startDate != nil {
-		query += " AND EXISTS (SELECT 1 FROM receptions WHERE receptions.pvz_id = pvzs.id AND receptions.created_at >= $1)"
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM receptions WHERE receptions.pvz_id = pvzs.id AND receptions.created_at >= $%d)", argIndex)
 		args = append(args, startDate)
+		argIndex++
 	}
 
 	if endDate != nil {
-		query += " AND EXISTS (SELECT 1 FROM receptions WHERE receptions.pvz_id = pvzs.id AND receptions.created_at <= $2)"
+		query += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM receptions WHERE receptions.pvz_id = pvzs.id AND receptions.created_at <= $%d)", argIndex)
 		args = append(args, endDate)
+		argIndex++
 	}
 
-	query += `
+	query += fmt.Sprintf(`
         ORDER BY reg_date DESC
-        LIMIT $3 OFFSET $4
-    `
+        LIMIT $%d OFFSET $%d
+    `, argIndex, argIndex+1)
 
 	args = append(args, limit, (page-1)*limit)
+
 	rows, err := pr.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при получении списка ПВЗ: %w", err)

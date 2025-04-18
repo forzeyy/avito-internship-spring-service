@@ -20,7 +20,7 @@ type receptionRepo struct {
 	db DB
 }
 
-func NewReceiptRepo(db DB) ReceptionRepo {
+func NewReceptionRepo(db DB) ReceptionRepo {
 	return &receptionRepo{db: db}
 }
 
@@ -42,12 +42,12 @@ func (rr *receptionRepo) CloseLastReception(ctx context.Context, pvzID uuid.UUID
 	query := `
 		WITH last_reception AS (
 			SELECT id
-			FROM receipts
+			FROM receptions
 			WHERE pvz_id = $1 and status = 'in_progress'
 			ORDER BY created_at DESC
 			LIMIT 1
 		)
-		UPDATE receipts
+		UPDATE receptions
 		SET status = 'close', closed_at = NOW()
 		WHERE id = (SELECT id FROM last_reception)
 		RETURNING id, pvz_id, status, created_at, closed_at

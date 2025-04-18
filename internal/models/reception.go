@@ -7,9 +7,9 @@ import (
 )
 
 type Reception struct {
-	ID       uuid.UUID  `json:"id"`
-	DateTime time.Time  `json:"date_time"`
-	PVZID    uuid.UUID  `json:"pvz_id"`
-	Status   string     `json:"status"`
-	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	ID       uuid.UUID
+	DateTime time.Time
+	PVZID    uuid.UUID
+	Status   string
+	ClosedAt *time.Time
 }

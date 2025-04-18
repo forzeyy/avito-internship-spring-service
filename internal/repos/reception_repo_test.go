@@ -20,7 +20,7 @@ func TestCreateReception_Success(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 
 	reception := &models.Reception{
 		ID:       uuid.New(),
@@ -44,7 +44,7 @@ func TestCloseLastReception_Success(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 
 	pvzID := uuid.New()
 	now := time.Now()
@@ -78,7 +78,7 @@ func TestCloseLastReception_NotFound(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 
 	pvzID := uuid.New()
 
@@ -97,7 +97,7 @@ func TestCreateReception_Failure(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 
 	reception := &models.Reception{
 		ID:       uuid.New(),
@@ -122,7 +122,7 @@ func TestGetLastOpenReception_Success(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 
 	pvzID := uuid.New()
 	receptionID := uuid.New()
@@ -150,7 +150,7 @@ func TestGetLastOpenReception_NoRows(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 	pvzID := uuid.New()
 
 	mock.ExpectQuery("SELECT id, pvz_id, status, created_at, closed_at").
@@ -170,7 +170,7 @@ func TestGetLastOpenReception_QueryError(t *testing.T) {
 	assert.NoError(t, err)
 	defer mock.Close()
 
-	repo := repos.NewReceiptRepo(mock)
+	repo := repos.NewReceptionRepo(mock)
 	pvzID := uuid.New()
 
 	mock.ExpectQuery("SELECT id, pvz_id, status, created_at, closed_at").

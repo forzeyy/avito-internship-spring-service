@@ -7,7 +7,7 @@ import (
 )
 
 type PVZ struct {
-	ID      uuid.UUID `json:"id"`
-	RegDate time.Time `json:"reg_date"`
-	City    string    `json:"city"`
+	ID      uuid.UUID
+	RegDate time.Time
+	City    string
 }
