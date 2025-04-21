@@ -19,8 +19,12 @@ func NewPVZHandler(pvzSvc services.PVZService) *PVZHandler {
 	}
 }
 
+type CreatePVZRequest struct {
+	City dto.PVZCity `json:"city"`
+}
+
 func (ph *PVZHandler) CreatePVZ(c echo.Context) error {
-	var request dto.PostPvzJSONRequestBody
+	var request CreatePVZRequest
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, dto.Error{
 			Message: "невалидный запрос",

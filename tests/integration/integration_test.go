@@ -20,14 +20,12 @@ import (
 )
 
 func TestPVZAndReceptionIntegration(t *testing.T) {
-	// Подключение к базе данных
 	db, err := database.ConnectDatabase("postgres://postgres:postgres@localhost:5432/avito?sslmode=disable")
 	if err != nil {
 		t.Fatalf("Ошибка подключения к базе данных: %v", err)
 	}
 	defer db.Close()
 
-	// Инициализация компонентов
 	userRepo := repos.NewUserRepo(db)
 	userSvc := services.NewUserService(userRepo, "secrettt", utils.DefaultAuthUtil{})
 	authHandler := handlers.NewAuthHandler(userSvc)
@@ -44,43 +42,62 @@ func TestPVZAndReceptionIntegration(t *testing.T) {
 	productSvc := services.NewProductService(productRepo, receptionRepo)
 	productHandler := handlers.NewProductHandler(productSvc)
 
-	// Создаем экземпляр Echo для тестирования
 	e := echo.New()
-
-	// Регистрируем обработчики
 	RegisterHandlers(e, authHandler, pvzHandler, receptionHandler, productHandler)
 
-	// Переменная для хранения ID созданного ПВЗ
+	var moderatorToken string
+	var employeeToken string
 	var pvzID string
 
-	// Шаг 1: Создание нового ПВЗ
-	t.Run("Create PVZ", func(t *testing.T) {
-		reqBody := dto.PostPvzJSONRequestBody{
-			City: dto.PVZCity("Москва"),
-		}
-
-		reqBodyBytes, _ := json.Marshal(reqBody)
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/pvz", bytes.NewBuffer(reqBodyBytes))
-		req.Header.Set("Authorization", "Bearer moderatorToken") // Модераторский токен
+	t.Run("Dummy Login", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/dummyLogin", bytes.NewBuffer([]byte(`{"role":"moderator"}`)))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
 
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var tokenResp dto.Token
+		err := json.Unmarshal(rec.Body.Bytes(), &tokenResp)
+		assert.NoError(t, err)
+		moderatorToken = tokenResp
+		assert.NotEmpty(t, moderatorToken)
+
+		req2 := httptest.NewRequest(http.MethodPost, "/dummyLogin", bytes.NewBuffer([]byte(`{"role":"employee"}`)))
+		req2.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec2 := httptest.NewRecorder()
+		e.ServeHTTP(rec2, req2)
+
+		assert.Equal(t, http.StatusOK, rec2.Code)
+
+		err = json.Unmarshal(rec2.Body.Bytes(), &tokenResp)
+		assert.NoError(t, err)
+		employeeToken = tokenResp
+		assert.NotEmpty(t, employeeToken)
+	})
+
+	t.Run("Create PVZ", func(t *testing.T) {
+		body, _ := json.Marshal(handlers.CreatePVZRequest{
+			City: dto.Москва,
+		})
+		req := httptest.NewRequest(http.MethodPost, "/pvz", bytes.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+moderatorToken)
+		req.Header.Set("Content-Type", "application/json")
+
+		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
 		var createdPVZ dto.PVZ
-		err := json.Unmarshal(rec.Body.Bytes(), &createdPVZ)
+		err := json.NewDecoder(rec.Body).Decode(&createdPVZ)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, createdPVZ.Id)
+		assert.NotNil(t, createdPVZ.Id)
 		assert.Equal(t, "Москва", string(createdPVZ.City))
 
-		// Сохраняем ID созданного ПВЗ для дальнейшего использования
 		pvzID = createdPVZ.Id.String()
-		t.Logf("Created PVZ with ID: %s", pvzID)
 	})
 
-	// Шаг 2: Добавление новой приемки заказов
 	t.Run("Create Reception", func(t *testing.T) {
 		if pvzID == "" {
 			t.Fatalf("ПВЗ не был создан")
@@ -90,12 +107,12 @@ func TestPVZAndReceptionIntegration(t *testing.T) {
 			PvzId: uuid.MustParse(pvzID),
 		}
 
-		reqBodyBytes, _ := json.Marshal(reqBody)
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/receptions", bytes.NewBuffer(reqBodyBytes))
-		req.Header.Set("Authorization", "Bearer employeeToken")
+		reqBytes, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/receptions", bytes.NewBuffer(reqBytes))
+		req.Header.Set("Authorization", "Bearer "+employeeToken)
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
+		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusCreated, rec.Code)
@@ -104,10 +121,8 @@ func TestPVZAndReceptionIntegration(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &createdReception)
 		assert.NoError(t, err)
 		assert.Equal(t, "in_progress", string(createdReception.Status))
-		t.Logf("Created Reception with ID: %s", createdReception.Id)
 	})
 
-	// Шаг 3: Добавление 50 товаров в текущую приемку
 	t.Run("Add 50 Products", func(t *testing.T) {
 		if pvzID == "" {
 			t.Fatalf("ПВЗ не был создан")
@@ -119,30 +134,27 @@ func TestPVZAndReceptionIntegration(t *testing.T) {
 				PvzId: uuid.MustParse(pvzID),
 			}
 
-			reqBodyBytes, _ := json.Marshal(reqBody)
-			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/products", bytes.NewBuffer(reqBodyBytes))
-			req.Header.Set("Authorization", "Bearer employeeToken")
+			reqBytes, _ := json.Marshal(reqBody)
+			req := httptest.NewRequest(http.MethodPost, "/products", bytes.NewBuffer(reqBytes))
+			req.Header.Set("Authorization", "Bearer "+employeeToken)
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
+			rec := httptest.NewRecorder()
 			e.ServeHTTP(rec, req)
 
 			assert.Equal(t, http.StatusCreated, rec.Code)
 		}
-
-		t.Logf("Added 50 products to the reception")
 	})
 
-	// Шаг 4: Закрытие приемки заказов
 	t.Run("Close Reception", func(t *testing.T) {
 		if pvzID == "" {
 			t.Fatalf("ПВЗ не был создан")
 		}
 
-		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/pvz/"+pvzID+"/close_last_reception", nil)
-		req.Header.Set("Authorization", "Bearer employeeToken")
+		req.Header.Set("Authorization", "Bearer "+employeeToken)
 
+		rec := httptest.NewRecorder()
 		e.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -151,29 +163,20 @@ func TestPVZAndReceptionIntegration(t *testing.T) {
 		err := json.Unmarshal(rec.Body.Bytes(), &closedReception)
 		assert.NoError(t, err)
 		assert.Equal(t, "close", string(closedReception.Status))
-		t.Logf("Closed reception with ID: %s", closedReception.Id)
 	})
 }
 
-// Функция для регистрации обработчиков
 func RegisterHandlers(e *echo.Echo, authHandler *handlers.AuthHandler, pvzHandler *handlers.PVZHandler, receptionHandler *handlers.ReceptionHandler, productHandler *handlers.ProductHandler) {
-	// Авторизация
 	e.POST("/dummyLogin", authHandler.DummyLogin)
 	e.POST("/register", authHandler.RegisterUser)
 	e.POST("/login", authHandler.LoginUser)
 
-	// Группа защищенных маршрутов
 	protected := e.Group("")
 	protected.Use(middleware.JWTMiddleware("secrettt"), middleware.WithRole())
 
-	// ПВЗ (создание доступно только модераторам)
 	protected.POST("/pvz", pvzHandler.CreatePVZ, middleware.OnlyModerator())
-
-	// Приемка товаров (доступно только сотрудникам ПВЗ)
 	protected.POST("/receptions", receptionHandler.CreateReception, middleware.OnlyEmployee())
 	protected.POST("/pvz/:pvzId/close_last_reception", receptionHandler.CloseLastReception, middleware.OnlyEmployee())
-
-	// Товары (доступно только сотрудникам ПВЗ)
 	protected.POST("/pvz/:pvzId/delete_last_product", productHandler.DeleteLastProduct, middleware.OnlyEmployee())
 	protected.POST("/products", productHandler.AddProduct, middleware.OnlyEmployee())
 }
